@@ -1,0 +1,29 @@
+# Matter Exhaust Fan + Light Controller — build defaults
+#
+# Matter transport is Thread; Wi-Fi runs alongside it for the local
+# mDNS/HTTP maintenance UI (spec §5.4). The stock esp-matter light example
+# defaults to Wi-Fi even on Thread-capable hardware, so Thread is selected
+# explicitly here (spec §6.1).
+
+CONFIG_IDF_TARGET="esp32c6"
+
+# --- Thread (Matter transport) ---
+CONFIG_OPENTHREAD_ENABLED=y
+CONFIG_ENABLE_MATTER_OVER_THREAD=y
+CONFIG_OPENTHREAD_SRP_CLIENT=y
+CONFIG_OPENTHREAD_DNS_CLIENT=y
+
+# --- Wi-Fi (maintenance UI only — mDNS + HTTP, never Matter) ---
+CONFIG_ENABLE_WIFI_STATION=y
+
+# --- BLE for Matter commissioning ---
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+
+# --- Storage ---
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_NVS_ENCRYPTION=n
+
+# --- mDNS ---
+CONFIG_MDNS_MAX_SERVICES=10

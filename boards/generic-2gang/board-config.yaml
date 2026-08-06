@@ -1,0 +1,33 @@
+# Board configuration — the ONLY file a hardware fork edits.
+# Schema documented in docs/architecture.md §Forkability; compiled to
+# main/board_config.h by tools/gen_board_config.py at build time.
+
+board_name: "generic-2gang"
+
+gpio:
+  fan_rocker_up: 4
+  fan_rocker_down: 5
+  light_rocker_up: 6
+  light_rocker_down: 7
+  mua_relay: 10
+  # UART to the dimmer bridge inside the metal enclosure (see docs/wiring.md)
+  dimmer_bridge_tx: 16
+  dimmer_bridge_rx: 17
+
+dimmer:
+  fan_curve: linear          # motor-appropriate linear power curve
+  fan_min_percent: 30        # default speed floor; calibrated per motor via web UI
+  light_curve: logarithmic   # LED-appropriate perceptual curve
+
+mua:
+  present: true
+  threshold_percent_default: 60   # default only — real value calibrated to the
+                                  # installed fan's 400 CFM point, stored in NVS
+  hysteresis_percent: 4
+
+input:
+  debounce_ms: 25
+  hold_ms: 450
+  factory_reset_hold_ms: 5000
+
+hostname_prefix: "exhaust"
