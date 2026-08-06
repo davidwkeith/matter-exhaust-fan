@@ -1,0 +1,44 @@
+name: Firmware build
+
+# Compile-checks the firmware against pinned ESP-IDF + esp-matter using
+# Espressif's esp-matter container. Slower than the host-test job, so it
+# only runs when firmware sources change (or on demand).
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "core/**"
+      - "main/**"
+      - "boards/**"
+      - "CMakeLists.txt"
+      - "sdkconfig.defaults"
+      - "partitions.csv"
+      - ".github/workflows/firmware.yml"
+  push:
+    branches: [main]
+    paths:
+      - "core/**"
+      - "main/**"
+      - "boards/**"
+      - "CMakeLists.txt"
+      - "sdkconfig.defaults"
+      - "partitions.csv"
+
+jobs:
+  build:
+    name: idf.py build (esp32c6, ${{ matrix.board }})
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/esp-matter:latest
+    strategy:
+      matrix:
+        board: [generic-2gang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          . $ESP_MATTER_PATH/export.sh
+          idf.py set-target esp32c6
+          idf.py -DBOARD=${{ matrix.board }} build

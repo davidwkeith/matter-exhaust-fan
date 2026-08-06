@@ -18,6 +18,8 @@ dimmer:
   fan_curve: linear          # motor-appropriate linear power curve
   fan_min_percent: 30        # default speed floor; calibrated per motor via web UI
   light_curve: logarithmic   # LED-appropriate perceptual curve
+  fan_ramp_ms_per_percent: 40    # 0→100% in 4s
+  light_fade_ms_per_percent: 10  # 0→100% in 1s
 
 mua:
   present: true

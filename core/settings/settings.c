@@ -136,6 +136,31 @@ esp_err_t settings_set_webui_pass_hash(const char *hash)
     return set_str(NS_USER, "pass_hash", hash);
 }
 
+esp_err_t settings_get_wifi(char *ssid, size_t ssid_len,
+                            char *pass, size_t pass_len)
+{
+    esp_err_t err = get_str(NS_USER, "wifi_ssid", ssid, ssid_len);
+    if (err != ESP_OK) {
+        return err;
+    }
+    /* Open networks store an empty password. */
+    err = get_str(NS_USER, "wifi_pass", pass, pass_len);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        pass[0] = '\0';
+        err = ESP_OK;
+    }
+    return err;
+}
+
+esp_err_t settings_set_wifi(const char *ssid, const char *pass)
+{
+    esp_err_t err = set_str(NS_USER, "wifi_ssid", ssid);
+    if (err != ESP_OK) {
+        return err;
+    }
+    return set_str(NS_USER, "wifi_pass", pass ? pass : "");
+}
+
 /* --- factory reset --- */
 
 esp_err_t settings_factory_reset(void)

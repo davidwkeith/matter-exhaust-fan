@@ -12,6 +12,7 @@ SRCS = test_main.c \
        ../core/input/channel.c \
        ../core/input/reset_chord.c \
        ../core/dimmer/dimmer_curve.c \
+       ../core/dimmer/ramp.c \
        ../core/mua/mua.c
 
 all: run_tests

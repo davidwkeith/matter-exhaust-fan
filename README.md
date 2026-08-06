@@ -78,6 +78,15 @@ The build explicitly selects **Thread** for Matter transport (the stock
 esp-matter light example defaults to Wi-Fi even on Thread-capable hardware);
 Wi-Fi is enabled alongside it for the mDNS/HTTP maintenance UI.
 
+First boot: with no Wi-Fi credentials stored, the device raises an open
+setup access point named after its hostname (e.g. `exhaust-2af03e`); connect
+and open `http://192.168.4.1/` to point it at your network. Matter
+commissioning is independent of this — the wall switches and Thread work
+with Wi-Fi never configured.
+
+The `Firmware build` GitHub Actions workflow compile-checks the firmware in
+Espressif's esp-matter container for every board under `boards/`.
+
 ## Running the host tests
 
 The core interaction logic (rocker state machine, dimmer curves, MUA
