@@ -1,0 +1,18 @@
+# ESP-IDF build output
+build/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+managed_components/
+
+# Generated board config header (regenerated from boards/<name>/board-config.yaml)
+main/board_config.h
+
+# Host test artifacts
+test/*.o
+test/run_tests
+
+# Editors
+.vscode/
+.idea/
+*.swp

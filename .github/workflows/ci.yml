@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  host-tests:
+    name: Host unit tests (portable core logic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run tests
+        run: make -C test
+
+  board-configs:
+    name: Validate board configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Generate a header from every board config
+        run: |
+          set -e
+          for cfg in boards/*/board-config.yaml; do
+            echo "== $cfg"
+            python3 tools/gen_board_config.py "$cfg" /tmp/board_config.h
+          done
