@@ -20,7 +20,10 @@ CONFIG_ENABLE_WIFI_STATION=y
 CONFIG_BT_ENABLED=y
 CONFIG_BT_NIMBLE_ENABLED=y
 
-# --- Storage ---
+# --- Flash / storage ---
+# XIAO ESP32-C6 (reference board) carries 4MB flash; the partition layout
+# (dual ~1.9MB OTA slots + fctry) requires it.
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_NVS_ENCRYPTION=n
