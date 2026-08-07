@@ -1,8 +1,14 @@
 # Name,   Type, SubType,  Offset,   Size,  Flags
 # esp-matter layout: dual OTA app slots + fctry partition for Matter factory data
+#
+# 8MB flash (ESP32-C6-WROOM-1-N8). ota_0/ota_1 are the largest equal,
+# 64KB-aligned pair that fits (app partitions must start on a 64KB
+# boundary for flash mmap) — ~3.75MB each, comfortably clear of the
+# ~2.15MB binary. A few dozen KB are left unallocated at the very end;
+# not worth chasing given the margin already in hand.
 nvs,      data, nvs,      0x10000,  0xC000,
 otadata,  data, ota,      ,         0x2000,
 phy_init, data, phy,      ,         0x1000,
-ota_0,    app,  ota_0,    0x20000,  0x1E0000,
-ota_1,    app,  ota_1,    ,         0x1E0000,
+ota_0,    app,  ota_0,    0x20000,  0x3E0000,
+ota_1,    app,  ota_1,    ,         0x3E0000,
 fctry,    data, nvs,      ,         0x6000,

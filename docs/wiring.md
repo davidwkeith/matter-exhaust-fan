@@ -8,7 +8,7 @@
 
 | Function | Part | Enclosure |
 |---|---|---|
-| MCU/radio | Seeed XIAO ESP32-C6 (or equivalent ESP32-C6/H2 module) | External (plastic) |
+| MCU/radio | ESP32-C6-WROOM-1-N8, 8MB flash (or equivalent ESP32-C6/H2 module with ≥8MB flash) | External (plastic) |
 | Fan speed control | Leading-edge TRIAC AC dimmer, **motor-rated** (e.g. RobotDyn AC dimmer module) | Metal box |
 | Light dimming | Trailing-edge MOSFET AC dimmer, **LED-rated** | Metal box |
 | Zero-cross detection | Shared between both channels | Metal box |
