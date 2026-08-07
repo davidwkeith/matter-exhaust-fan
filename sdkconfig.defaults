@@ -20,8 +20,9 @@ CONFIG_ENABLE_WIFI_STATION=y
 CONFIG_BT_ENABLED=y
 CONFIG_BT_NIMBLE_ENABLED=y
 
-# --- Size: the binary must fit the 1.92MB OTA slots (dual-OTA on 4MB) ---
-# Also switches the CHIP static library from O3 to Os.
+# --- Size: kept even after moving to 8MB flash (see below) — good
+# production hygiene and they cost nothing now that the OTA slots have
+# real headroom. Also switches the CHIP static library from O3 to Os.
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 CONFIG_LIBC_NEWLIB_NANO_FORMAT=y
 # BLE is only ever a commissioning advertiser — drop the unused roles.
@@ -168,9 +169,13 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 CONFIG_LWIP_IPV6_AUTOCONFIG=y
 
 # --- Flash / storage ---
-# XIAO ESP32-C6 (reference board) carries 4MB flash; the partition layout
-# (dual ~1.9MB OTA slots + fctry) requires it.
-CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+# Reference module is ESP32-C6-WROOM-1-N8 (8MB flash) — same silicon/radio
+# as the XIAO ESP32-C6 dev board this was prototyped on, just more flash.
+# The XIAO board only ships with 4MB, which the compiled binary (~2.15MB,
+# even after trimming unused Matter clusters and stripping debug logs)
+# doesn't comfortably fit alongside a second full-size OTA slot. 8MB gives
+# each of the two ~3.75MB OTA slots ~83% headroom over the current binary.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_NVS_ENCRYPTION=n
