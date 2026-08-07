@@ -79,6 +79,24 @@ static esp_err_t set_str(const char *ns, const char *key, const char *val)
     return err;
 }
 
+static esp_err_t erase_key(const char *ns, const char *key)
+{
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(ns, NVS_READWRITE, &h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_erase_key(h, key);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        err = ESP_OK; /* already absent */
+    }
+    if (err == ESP_OK) {
+        err = nvs_commit(h);
+    }
+    nvs_close(h);
+    return err;
+}
+
 /* --- hardware calibration --- */
 
 uint8_t settings_get_mua_threshold(uint8_t d) { return get_u8(NS_CAL, "mua_thr", d); }
@@ -134,6 +152,11 @@ esp_err_t settings_get_webui_pass_hash(char *buf, size_t len)
 esp_err_t settings_set_webui_pass_hash(const char *hash)
 {
     return set_str(NS_USER, "pass_hash", hash);
+}
+
+esp_err_t settings_clear_webui_pass_hash(void)
+{
+    return erase_key(NS_USER, "pass_hash");
 }
 
 esp_err_t settings_get_wifi(char *ssid, size_t ssid_len,
