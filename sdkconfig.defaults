@@ -20,6 +20,23 @@ CONFIG_ENABLE_WIFI_STATION=y
 CONFIG_BT_ENABLED=y
 CONFIG_BT_NIMBLE_ENABLED=y
 
+# --- Size: the binary must fit the 1.92MB OTA slots (dual-OTA on 4MB) ---
+# Also switches the CHIP static library from O3 to Os.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_NEWLIB_NANO_FORMAT=y
+# BLE is only ever a commissioning advertiser — drop the unused roles.
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+
+# --- Crypto / runtime requirements from the esp-matter examples ---
+# CHIP's mbedTLS crypto PAL links against mbedtls_hkdf; the HKDF module is
+# off by default in ESP-IDF.
+CONFIG_MBEDTLS_HKDF_C=y
+CONFIG_LIBSODIUM_USE_MBEDTLS_SHA=y
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
+CONFIG_LWIP_IPV6_AUTOCONFIG=y
+
 # --- Flash / storage ---
 # XIAO ESP32-C6 (reference board) carries 4MB flash; the partition layout
 # (dual ~1.9MB OTA slots + fctry) requires it.
