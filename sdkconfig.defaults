@@ -23,7 +23,7 @@ CONFIG_BT_NIMBLE_ENABLED=y
 # --- Size: the binary must fit the 1.92MB OTA slots (dual-OTA on 4MB) ---
 # Also switches the CHIP static library from O3 to Os.
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
-CONFIG_NEWLIB_NANO_FORMAT=y
+CONFIG_LIBC_NEWLIB_NANO_FORMAT=y
 # BLE is only ever a commissioning advertiser — drop the unused roles.
 CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
 CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
