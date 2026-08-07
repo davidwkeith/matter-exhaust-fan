@@ -13,6 +13,8 @@
 #include <esp_matter.h>
 #include <esp_matter_endpoint.h>
 
+#include <app/server/Server.h>
+
 static const char *TAG = "matter";
 
 using namespace esp_matter;
@@ -21,6 +23,21 @@ using namespace esp_matter::endpoint;
 static matter_callbacks_t s_cbs;
 static uint16_t s_fan_endpoint_id = 0;
 static uint16_t s_light_endpoint_id = 0;
+
+static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
+{
+    (void)arg;
+    switch (event->Type) {
+    case chip::DeviceLayer::DeviceEventType::kCommissioningComplete:
+        ESP_LOGI(TAG, "commissioning complete");
+        break;
+    case chip::DeviceLayer::DeviceEventType::kFabricRemoved:
+        ESP_LOGW(TAG, "fabric removed");
+        break;
+    default:
+        break;
+    }
+}
 
 static esp_err_t app_attribute_update_cb(attribute::callback_type_t type,
                                          uint16_t endpoint_id,
@@ -86,7 +103,7 @@ extern "C" esp_err_t matter_endpoints_start(const matter_callbacks_t *cbs)
     }
     s_light_endpoint_id = endpoint::get_id(light_ep);
 
-    esp_err_t err = esp_matter::start(nullptr);
+    esp_err_t err = esp_matter::start(app_event_cb);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "esp_matter::start failed: %d", err);
         return err;

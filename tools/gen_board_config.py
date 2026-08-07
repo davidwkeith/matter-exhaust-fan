@@ -73,6 +73,8 @@ def main():
         f"#define BOARD_FAN_CURVE {CURVES[fan_curve]} /* {fan_curve} */",
         f"#define BOARD_FAN_MIN_PERCENT {int(require(cfg, 'dimmer.fan_min_percent'))}",
         f"#define BOARD_LIGHT_CURVE {CURVES[light_curve]} /* {light_curve} */",
+        f"#define BOARD_FAN_RAMP_MS_PER_PERCENT {int(require(cfg, 'dimmer.fan_ramp_ms_per_percent'))}",
+        f"#define BOARD_LIGHT_FADE_MS_PER_PERCENT {int(require(cfg, 'dimmer.light_fade_ms_per_percent'))}",
         "",
         f"#define BOARD_MUA_PRESENT {1 if require(cfg, 'mua.present') else 0}",
         f"#define BOARD_MUA_THRESHOLD_DEFAULT {int(require(cfg, 'mua.threshold_percent_default'))}",

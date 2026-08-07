@@ -10,6 +10,7 @@
 #include "channel.h"
 #include "dimmer_curve.h"
 #include "mua.h"
+#include "ramp.h"
 #include "reset_chord.h"
 #include "rocker.h"
 
@@ -226,6 +227,35 @@ static void test_mua_hysteresis(void)
     CHECK(mua_update(&m, false, 100) == false); /* fan off: always open */
 }
 
+static void test_ramp(void)
+{
+    ramp_t r;
+    ramp_init(&r, 40); /* 40ms per 1% */
+
+    /* Nothing happens before the first step interval elapses. */
+    ramp_set_target(&r, 50, 1000);
+    CHECK(ramp_active(&r));
+    CHECK(ramp_tick(&r, 1039) == false && r.current_percent == 0);
+    CHECK(ramp_tick(&r, 1040) == true && r.current_percent == 1);
+
+    /* A slow poll loop catches up: elapsed time covers multiple steps. */
+    CHECK(ramp_tick(&r, 1440) == true && r.current_percent == 11);
+
+    /* Ramp completes exactly at the target and goes inactive. */
+    CHECK(ramp_tick(&r, 10000) == true && r.current_percent == 50);
+    CHECK(!ramp_active(&r));
+    CHECK(ramp_tick(&r, 20000) == false);
+
+    /* Downward ramp (hold-to-off). */
+    ramp_set_target(&r, 0, 20000);
+    CHECK(ramp_tick(&r, 20040) == true && r.current_percent == 49);
+    CHECK(ramp_tick(&r, 30000) == true && r.current_percent == 0);
+
+    /* Remote writes apply immediately. */
+    ramp_jump_to(&r, 75);
+    CHECK(r.current_percent == 75 && !ramp_active(&r));
+}
+
 int main(void)
 {
     test_rocker_tap();
@@ -235,6 +265,7 @@ int main(void)
     test_reset_chord();
     test_dimmer_curves();
     test_mua_hysteresis();
+    test_ramp();
 
     if (g_failures) {
         fprintf(stderr, "%d check(s) FAILED\n", g_failures);

@@ -53,11 +53,11 @@ Why this split:
 | Module | Role | Portable? |
 |---|---|---|
 | `core/input` | Rocker debounce + tap/hold classification, per-channel state machine, factory-reset chord | Yes — host-tested |
-| `core/dimmer` | User-percent → power-percent curves; UART bridge protocol | Curves yes; bridge is ESP-only |
+| `core/dimmer` | User-percent → power-percent curves; ramp/fade engine; UART bridge protocol | Curves and ramp yes; bridge is ESP-only |
 | `core/mua` | Threshold + hysteresis relay logic | Yes — host-tested |
 | `core/settings` | NVS wrapper; calibration vs. user-state namespaces | ESP-only |
 | `core/matter` | esp-matter node: Fan Control (EP1), dimmable light (EP2) | ESP-only |
-| `core/provisioning` | MAC-derived hostname, mDNS | ESP-only |
+| `core/provisioning` | MAC-derived hostname, mDNS, maintenance Wi-Fi (STA + setup SoftAP) | ESP-only |
 | `core/webui` | Local HTTP maintenance UI | ESP-only |
 | `main` | Board-config include + glue | ESP-only |
 
@@ -123,6 +123,11 @@ is the required commissioning baseline; NFC tags are an aid on top
 - mDNS/HTTP run over **Wi-Fi**, not Thread, so the maintenance UI doesn't
   depend on a Thread Border Router's SRP-to-mDNS proxying. Matter traffic
   stays on Thread.
+- Wi-Fi bootstrap: credentials live in NVS (cleared on factory reset). When
+  none are stored, the device brings up an **open setup SoftAP** named after
+  the MAC-derived hostname; the web UI at `http://192.168.4.1/` takes the
+  credentials, then the device reboots into station mode. Normal operation
+  (wall switches, Matter over Thread) never depends on Wi-Fi being up.
 - VLAN caveat: mDNS multicast doesn't cross subnets. On a segmented network
   (e.g. an isolated IoT VLAN on UniFi), enable the mDNS reflector or
   `.local` resolution breaks silently.
@@ -159,5 +164,9 @@ Tracked from the spec:
 - [ ] Confirm MUA unit actuation time → possible fan-ramp lead-in delay
 - [ ] Define exact chorded-hold edge cases (one gang held, other briefly
       tapped mid-window) — see TODO in `core/input/reset_chord.c`
-- [ ] Hardware bring-up of the esp-matter glue, Wi-Fi station init, ramp
-      execution, and the remaining web UI pages (grep `TODO(bring-up)`)
+- [x] Ramp/fade execution, Wi-Fi maintenance plane, factory-fresh status
+      blink, web UI calibration/hostname/Wi-Fi pages
+- [ ] Remaining bring-up on hardware: validate the esp-matter glue against
+      the pinned release (the `Firmware build` CI workflow compile-checks
+      this), verify the dimmer-bridge protocol against the real bridge,
+      OTA update page, optional web UI password (grep `TODO(bring-up)`)

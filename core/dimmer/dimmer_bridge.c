@@ -5,10 +5,13 @@
 
 #include "driver/uart.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-#define BRIDGE_UART_NUM   UART_NUM_1
-#define BRIDGE_BAUD       115200
-#define BRIDGE_BUF_SIZE   256
+#define BRIDGE_UART_NUM       UART_NUM_1
+#define BRIDGE_BAUD           115200
+#define BRIDGE_BUF_SIZE       256
+#define BRIDGE_ACK_TIMEOUT_MS 20
 
 static const char *TAG = "dimmer_bridge";
 
@@ -44,7 +47,17 @@ esp_err_t dimmer_bridge_set(dimmer_channel_t ch, uint8_t power_percent)
         ESP_LOGW(TAG, "short write to bridge (%d/%d)", written, n);
         return ESP_FAIL;
     }
-    /* TODO(bring-up): match the concrete bridge's real protocol (DimmerLink
-     * or equivalent) and parse its ACK/error responses on the RX side. */
+
+    /* Reference bridge replies "OK\n" per command. A missing/garbled ACK is
+     * logged but non-fatal: the wall switch must keep working even if the
+     * bridge firmware doesn't ACK (e.g. a fork using a one-way protocol).
+     * TODO(bring-up): verify against the concrete bridge (DimmerLink or
+     * equivalent) and tighten to its real protocol. */
+    uint8_t resp[8] = { 0 };
+    int r = uart_read_bytes(BRIDGE_UART_NUM, resp, sizeof(resp) - 1,
+                            pdMS_TO_TICKS(BRIDGE_ACK_TIMEOUT_MS));
+    if (r < 2 || strncmp((const char *)resp, "OK", 2) != 0) {
+        ESP_LOGW(TAG, "no ACK for '%.*s' (got %d bytes)", n - 1, cmd, r);
+    }
     return ESP_OK;
 }
