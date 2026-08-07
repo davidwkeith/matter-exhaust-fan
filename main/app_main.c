@@ -13,6 +13,7 @@
 
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 
 #include "board_config.h"
 #include "channel.h"
@@ -275,5 +276,14 @@ void app_main(void)
 
     xTaskCreate(status_blink_task, "status", 3072, NULL, 3, NULL);
     xTaskCreate(input_task, "input", 4096, NULL, 5, NULL);
+
+    /* Reaching here means every subsystem above came up without an
+     * ESP_ERROR_CHECK abort. Confirm the running image so the bootloader
+     * stops treating it as pending-verify — if we never reach this line
+     * (crash/reboot loop right after an OTA update), CONFIG_BOOTLOADER_
+     * APP_ROLLBACK_ENABLE makes the bootloader fall back to the previous
+     * OTA slot on its own. */
+    esp_ota_mark_app_valid_cancel_rollback();
+
     ESP_LOGI(TAG, "%s up (board: %s)", host, BOARD_NAME);
 }

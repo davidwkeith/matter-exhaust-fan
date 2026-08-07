@@ -6,13 +6,15 @@
  *   /calibration MUA threshold + hysteresis + fan min-speed floor (NVS)
  *   /hostname    cosmetic friendly-name label (never the resolvable name)
  *   /wifi        maintenance-plane Wi-Fi credentials (reboots to apply)
- *   /update      firmware update (placeholder — OTA pending)
+ *   /update      firmware upload (esp_ota_*) to the inactive OTA slot,
+ *                reboots on success; auto-rollback on boot failure
  *
  * Auth (§7.1): password optional and user-set — device ships open on the
  * LAN until one is configured. Stored as a salted hash in NVS, session
  * cookie after login. Known limitation: plain HTTP — the password guards
  * against casual access on a shared network, not an on-path attacker.
- * TODO(bring-up): login/session handling is not implemented yet.
+ * TODO(bring-up): login/session handling is not implemented yet (#6) — once
+ * it lands, /update is the highest-priority page to gate behind it.
  */
 #pragma once
 

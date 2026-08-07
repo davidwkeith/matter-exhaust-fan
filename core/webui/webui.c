@@ -7,6 +7,8 @@
 
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
+#include "esp_partition.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -300,13 +302,144 @@ static esp_err_t wifi_post(httpd_req_t *req)
     return err;
 }
 
+/* Raw-binary upload (no multipart parsing needed): the page's inline script
+ * POSTs the .bin file body directly and reports progress via XHR upload
+ * events. Written to the inactive ota_0/ota_1 slot with esp_ota_*; the
+ * running slot is left untouched until esp_ota_set_boot_partition succeeds,
+ * so a bad upload never disturbs the working firmware. */
+
+static const char UPDATE_SCRIPT[] =
+    "<script>"
+    "document.getElementById('f').addEventListener('submit',function(ev){"
+    "ev.preventDefault();"
+    "var file=document.getElementById('file').files[0];"
+    "var status=document.getElementById('status');"
+    "if(!file)return;"
+    "var xhr=new XMLHttpRequest();"
+    "xhr.open('POST','/update');"
+    "xhr.setRequestHeader('Content-Type','application/octet-stream');"
+    "xhr.upload.onprogress=function(e){"
+    "if(e.lengthComputable){"
+    "status.textContent='Uploading: '+Math.round(100*e.loaded/e.total)+'%';"
+    "}};"
+    "xhr.onload=function(){document.open();document.write(xhr.responseText);"
+    "document.close();};"
+    "xhr.onerror=function(){status.textContent='Upload failed — connection "
+    "lost.';};"
+    "status.textContent='Uploading…';"
+    "xhr.send(file);"
+    "});"
+    "</script>";
+
 static esp_err_t update_get(httpd_req_t *req)
 {
-    /* TODO(bring-up): OTA upload against the ota_0/ota_1 partitions. */
-    return send_page(req,
+    const esp_partition_t *target = esp_ota_get_next_update_partition(NULL);
+
+    char body[1536];
+    snprintf(body, sizeof(body),
         "<h1>Firmware update</h1>"
-        "<p class=\"note\">Not implemented yet — flash over USB with "
-        "<code>idf.py flash</code> for now.</p>");
+        "<p class=\"note\">Upload a firmware <code>.bin</code> built for "
+        "this board (up to %lu KB). The current firmware stays in the "
+        "other OTA slot — if the new image fails to boot, the device "
+        "automatically rolls back to it.</p>"
+        "<form id=\"f\">"
+        "<label for=\"file\">Firmware image</label>"
+        "<input id=\"file\" name=\"file\" type=\"file\" accept=\".bin\" "
+        "required>"
+        "<button type=\"submit\">Upload and reboot</button>"
+        "</form>"
+        "<p id=\"status\" class=\"note\" role=\"status\"></p>"
+        "%s",
+        target ? (unsigned long)(target->size / 1024) : 0UL, UPDATE_SCRIPT);
+    return send_page(req, body);
+}
+
+#define OTA_CHUNK_SIZE 4096
+
+static esp_err_t update_post(httpd_req_t *req)
+{
+    if (req->content_len == 0) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "empty body");
+    }
+
+    const esp_partition_t *update_partition =
+        esp_ota_get_next_update_partition(NULL);
+    if (!update_partition) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                                   "no OTA partition available");
+    }
+    if (req->content_len > update_partition->size) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                                   "image too large for the OTA partition");
+    }
+
+    esp_ota_handle_t ota_handle;
+    esp_err_t err =
+        esp_ota_begin(update_partition, req->content_len, &ota_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_begin failed: %s", esp_err_to_name(err));
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                                   "could not start OTA write");
+    }
+
+    static uint8_t buf[OTA_CHUNK_SIZE]; /* too large for the httpd stack */
+    size_t received = 0;
+    while (received < req->content_len) {
+        size_t want = req->content_len - received;
+        if (want > OTA_CHUNK_SIZE) {
+            want = OTA_CHUNK_SIZE;
+        }
+        int r = httpd_req_recv(req, (char *)buf, want);
+        if (r == HTTPD_SOCK_ERR_TIMEOUT) {
+            continue;
+        }
+        if (r <= 0) {
+            esp_ota_abort(ota_handle);
+            ESP_LOGE(TAG, "OTA upload interrupted after %u/%u bytes",
+                     (unsigned)received, (unsigned)req->content_len);
+            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                                       "upload interrupted");
+        }
+        err = esp_ota_write(ota_handle, buf, (size_t)r);
+        if (err != ESP_OK) {
+            esp_ota_abort(ota_handle);
+            ESP_LOGE(TAG, "esp_ota_write failed: %s", esp_err_to_name(err));
+            return send_page(req,
+                "<h1>Firmware update</h1><p class=\"note\">Upload "
+                "rejected — not a valid firmware image for this board. "
+                "Nothing was flashed.</p>"
+                "<p><a href=\"/update\">Try again</a></p>");
+        }
+        received += (size_t)r;
+    }
+
+    err = esp_ota_end(ota_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_end failed: %s", esp_err_to_name(err));
+        return send_page(req,
+            "<h1>Firmware update</h1><p class=\"note\">Image failed "
+            "validation after upload — nothing was flashed. Re-download "
+            "it and try again.</p>"
+            "<p><a href=\"/update\">Try again</a></p>");
+    }
+
+    err = esp_ota_set_boot_partition(update_partition);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed: %s",
+                 esp_err_to_name(err));
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                                   "could not select the new firmware");
+    }
+
+    ESP_LOGW(TAG, "OTA update written to \"%s\", rebooting",
+             update_partition->label);
+    esp_err_t resp_err = send_page(req,
+        "<h1>Firmware update</h1><p class=\"ok\">Upload complete — "
+        "rebooting into the new firmware.</p>"
+        "<p class=\"note\">If it fails to come back up, the device "
+        "automatically rolls back to the version you're on now.</p>");
+    xTaskCreate(reboot_task, "reboot", 2048, NULL, 1, NULL);
+    return resp_err;
 }
 
 /* --- server ----------------------------------------------------------- */
@@ -317,6 +450,7 @@ esp_err_t webui_start(const webui_config_t *config)
 
     httpd_config_t http_cfg = HTTPD_DEFAULT_CONFIG();
     http_cfg.max_uri_handlers = 12;
+    http_cfg.stack_size = 8192; /* OTA write handler needs headroom */
     httpd_handle_t server = NULL;
     esp_err_t err = httpd_start(&server, &http_cfg);
     if (err != ESP_OK) {
@@ -333,6 +467,7 @@ esp_err_t webui_start(const webui_config_t *config)
         { .uri = "/wifi",        .method = HTTP_GET,  .handler = wifi_get },
         { .uri = "/wifi",        .method = HTTP_POST, .handler = wifi_post },
         { .uri = "/update",      .method = HTTP_GET,  .handler = update_get },
+        { .uri = "/update",      .method = HTTP_POST, .handler = update_post },
     };
     for (size_t i = 0; i < sizeof(routes) / sizeof(routes[0]); i++) {
         httpd_register_uri_handler(server, &routes[i]);
