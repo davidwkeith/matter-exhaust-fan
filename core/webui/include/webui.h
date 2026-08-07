@@ -10,11 +10,12 @@
  *                reboots on success; auto-rollback on boot failure
  *
  * Auth (§7.1): password optional and user-set — device ships open on the
- * LAN until one is configured. Stored as a salted hash in NVS, session
- * cookie after login. Known limitation: plain HTTP — the password guards
- * against casual access on a shared network, not an on-path attacker.
- * TODO(bring-up): login/session handling is not implemented yet (#6) — once
- * it lands, /update is the highest-priority page to gate behind it.
+ * LAN until one is configured via /password. Stored as a salted SHA-256
+ * hash in NVS, session cookie after login (not persistent Basic Auth).
+ * Once a password is set, every POST handler and /update require a valid
+ * session; GET pages stay viewable. Known limitation: plain HTTP — the
+ * password guards against casual access on a shared network, not an
+ * on-path attacker.
  */
 #pragma once
 

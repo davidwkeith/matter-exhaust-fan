@@ -166,7 +166,8 @@ Tracked from the spec:
       tapped mid-window) — see TODO in `core/input/reset_chord.c`
 - [x] Ramp/fade execution, Wi-Fi maintenance plane, factory-fresh status
       blink, web UI calibration/hostname/Wi-Fi/update pages
+- [x] Optional web UI password (§7.1): salted SHA-256 in NVS, session
+      cookie, gates POST handlers and `/update`
 - [ ] Remaining bring-up on hardware: validate the esp-matter glue against
       the pinned release (the `Firmware build` CI workflow compile-checks
-      this), verify the dimmer-bridge protocol against the real bridge,
-      optional web UI password (grep `TODO(bring-up)`)
+      this), verify the dimmer-bridge protocol against the real bridge

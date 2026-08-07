@@ -42,6 +42,7 @@ esp_err_t settings_get_hostname_label(char *buf, size_t buf_len);
 esp_err_t settings_set_hostname_label(const char *label);
 esp_err_t settings_get_webui_pass_hash(char *buf, size_t buf_len);
 esp_err_t settings_set_webui_pass_hash(const char *hash);
+esp_err_t settings_clear_webui_pass_hash(void);
 
 /* Wi-Fi credentials for the maintenance plane (§5.4). User state — cleared
  * on factory reset. Returns ESP_ERR_NVS_NOT_FOUND when unset. */
