@@ -53,7 +53,11 @@ CONFIG_SUPPORT_CHANNEL_CLUSTER=n
 CONFIG_SUPPORT_CHIME_CLUSTER=n
 CONFIG_SUPPORT_CLOSURE_CONTROL_CLUSTER=n
 CONFIG_SUPPORT_CLOSURE_DIMENSION_CLUSTER=n
-CONFIG_SUPPORT_COLOR_CONTROL_CLUSTER=n
+# COLOR_CONTROL stays enabled: level-control's coupled-color-temp codegen
+# calls emberAfPluginLevelControlCoupledColorTempChangeCallback()
+# unconditionally, which only exists when color control is compiled in —
+# disabling it is a link error (undefined reference), not a size win we
+# can safely take. We use level-control (dimmable light) either way.
 CONFIG_SUPPORT_COMMISSIONER_CONTROL_CLUSTER=n
 CONFIG_SUPPORT_COMMODITY_METERING_CLUSTER=n
 CONFIG_SUPPORT_COMMODITY_PRICE_CLUSTER=n
