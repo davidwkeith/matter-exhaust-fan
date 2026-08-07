@@ -3,4 +3,4 @@
 idf_component_register(SRCS "app_main.c"
                        INCLUDE_DIRS "."
                        REQUIRES input dimmer mua settings matter provisioning
-                                webui driver)
+                                webui driver app_update)

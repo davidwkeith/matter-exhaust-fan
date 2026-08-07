@@ -30,3 +30,10 @@ CONFIG_NVS_ENCRYPTION=n
 
 # --- mDNS ---
 CONFIG_MDNS_MAX_SERVICES=10
+
+# --- OTA rollback (issue #5) ---
+# A freshly flashed OTA image boots into a "pending verify" state; app_main
+# confirms it (esp_ota_mark_app_valid_cancel_rollback) once every subsystem
+# is up. If the new image crash-loops before reaching that point, the
+# bootloader falls back to the previous OTA slot on its own.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
