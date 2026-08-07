@@ -149,6 +149,16 @@ CONFIG_SUPPORT_WEB_RTC_TRANSPORT_REQUESTOR_CLUSTER=n
 CONFIG_SUPPORT_WINDOW_COVERING_CLUSTER=n
 CONFIG_SUPPORT_ZONE_MANAGEMENT_CLUSTER=n
 
+# --- Size: strip INFO/DEBUG/VERBOSE log calls at compile time. ESP-IDF's
+# CONFIG_LOG_MAXIMUM_LEVEL gates ESP_LOGx macros to no-ops above this level,
+# which removes both the call sites and their format-string literals from
+# flash — not just a runtime verbosity filter. The IDF/CHIP/esp-matter
+# stack is heavily logged, so this is a large share of what's left after
+# trimming unused clusters. UART logs go from chatty to warnings-and-errors
+# only; nothing about device behavior changes.
+CONFIG_LOG_MAXIMUM_LEVEL_WARN=y
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+
 # --- Crypto / runtime requirements from the esp-matter examples ---
 # CHIP's mbedTLS crypto PAL links against mbedtls_hkdf; the HKDF module is
 # off by default in ESP-IDF.
