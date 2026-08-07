@@ -40,3 +40,10 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/core")
 
 project(matter_exhaust_fan)
+
+# Build-wide flags required by CHIP, exactly as esp-matter's example apps set
+# them: every C++ TU that touches CHIP headers (esp_matter and dependents)
+# needs gnu++17 and the generated CHIP config pulled in.
+idf_build_set_property(CXX_COMPILE_OPTIONS "-std=gnu++17;-Os;-DCHIP_HAVE_CONFIG_H" APPEND)
+idf_build_set_property(C_COMPILE_OPTIONS "-Os" APPEND)
+idf_build_set_property(COMPILE_OPTIONS "-Wno-format-nonliteral;-Wno-format-security" APPEND)
