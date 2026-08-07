@@ -20,6 +20,15 @@ CONFIG_ENABLE_WIFI_STATION=y
 CONFIG_BT_ENABLED=y
 CONFIG_BT_NIMBLE_ENABLED=y
 
+# --- Size: the binary must fit the 1.92MB OTA slots (dual-OTA on 4MB) ---
+# Also switches the CHIP static library from O3 to Os.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_NEWLIB_NANO_FORMAT=y
+# BLE is only ever a commissioning advertiser — drop the unused roles.
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+
 # --- Crypto / runtime requirements from the esp-matter examples ---
 # CHIP's mbedTLS crypto PAL links against mbedtls_hkdf; the HKDF module is
 # off by default in ESP-IDF.
