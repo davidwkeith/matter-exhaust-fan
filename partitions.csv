@@ -1,8 +1,11 @@
 # Name,   Type, SubType,  Offset,   Size,  Flags
 # esp-matter layout: dual OTA app slots + fctry partition for Matter factory data
+# ota_0/ota_1 are sized to use every byte of the 4MB flash that isn't spoken
+# for by nvs/otadata/phy_init/fctry (was 0x1E0000, leaving ~104KB unused at
+# the end of flash).
 nvs,      data, nvs,      0x10000,  0xC000,
 otadata,  data, ota,      ,         0x2000,
 phy_init, data, phy,      ,         0x1000,
-ota_0,    app,  ota_0,    0x20000,  0x1E0000,
-ota_1,    app,  ota_1,    ,         0x1E0000,
+ota_0,    app,  ota_0,    0x20000,  0x1ED000,
+ota_1,    app,  ota_1,    ,         0x1ED000,
 fctry,    data, nvs,      ,         0x6000,
