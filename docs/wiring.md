@@ -9,6 +9,7 @@
 | Function | Part | Enclosure |
 |---|---|---|
 | Controller | Raspberry Pi 3 Model B or B+ (Wi-Fi + BLE onboard), 64-bit Raspberry Pi OS Lite on an industrial/high-endurance microSD | External (plastic) |
+| Thread radio | [Home Assistant Connect ZBT-1](https://toolbox.openhomefoundation.org/home-assistant-connect-zbt-1/) flashed with its [OpenThread RCP firmware](https://connectzbt1.home-assistant.io/about-firmware-options), on a ~30cm USB extension cable | External (plastic) |
 | Fan speed control | Leading-edge TRIAC AC dimmer, **motor-rated** (e.g. RobotDyn AC dimmer module) | Metal box |
 | Light dimming | Trailing-edge MOSFET AC dimmer, **LED-rated** | Metal box |
 | Zero-cross detection | Shared between both channels | Metal box |
@@ -83,6 +84,20 @@ enable_uart=1
 `enable_uart=1` pins the core clock so the mini UART's baud rate is stable.
 Remove `console=serial0,115200` from `cmdline.txt` so the kernel console
 doesn't talk to the dimmer bridge. Don't use `dtoverlay=disable-bt`.
+
+### Thread radio (ZBT-1)
+
+- Flash the ZBT-1 with its **Thread** (OpenThread RCP) firmware before
+  installing it — it ships with Zigbee firmware. The
+  [firmware page](https://connectzbt1.home-assistant.io/firmware-update)
+  flashes it from a browser.
+- Plug it in through a short USB extension cable so the 802.15.4 antenna
+  sits away from the Pi's own 2.4GHz Wi-Fi/BLE antenna and USB noise.
+  Both stay inside the plastic enclosure.
+- Install [ot-br-posix](https://openthread.io/guides/border-router/raspberry-pi)
+  and point it at the dongle by its stable path
+  (`/dev/serial/by-id/usb-Nabu_Casa_…`), not `/dev/ttyUSB0`.
+- Its draw comes out of the same 5V ≥2.5A supply.
 
 ### OS hardening
 
