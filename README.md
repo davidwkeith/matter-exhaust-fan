@@ -9,8 +9,9 @@ Designed to be forked by any exhaust fan or range hood manufacturer for their
 own hardware — the split between core firmware and board-specific configuration
 is the primary design constraint, not an afterthought.
 
-**Status:** Scaffolding — structure and core logic in place, hardware bring-up
-pending. See [docs/architecture.md](docs/architecture.md) for the full design.
+**Status:** Scaffolding — structure and core logic in place. The reference
+controller is moving from the ESP32-C6 to a **Raspberry Pi 3**; the Linux
+port of the ESP-only modules and hardware bring-up are pending. See [docs/architecture.md](docs/architecture.md) for the full design.
 
 ## Goals
 
@@ -39,6 +40,7 @@ core/           Core firmware (NOT forked) — Matter clusters, input state
 boards/         Board configs (the ONLY thing a fork edits) — one directory
                 per hardware variant containing board-config.yaml
 main/           Thin ESP-IDF entry point wiring core modules together
+                (legacy ESP32-C6 build; Pi 3 port pending)
 tools/          Build tooling — board-config.yaml → C header generator
 test/           Host-side unit tests for the portable core logic (no ESP-IDF
                 required — plain gcc/make)
@@ -51,16 +53,21 @@ Two physically and electrically separate enclosures:
 
 | Enclosure | Contents |
 |---|---|
-| **Metal box** (line voltage) | TRIAC fan dimmer (leading-edge, motor-rated), MOSFET light dimmer (trailing-edge, LED-rated), shared zero-cross detection, UART/I2C dimmer bridge, isolated AC-DC supply |
-| **Plastic box** (low voltage, RF-clean) | ESP32-C6 (Matter over Thread; Wi-Fi for the maintenance UI), MUA dry-contact relay module |
+| **Metal box** (line voltage) | TRIAC fan dimmer (leading-edge, motor-rated), MOSFET light dimmer (trailing-edge, LED-rated), shared zero-cross detection, UART/I2C dimmer bridge, isolated 5V ≥2.5A AC-DC supply |
+| **Plastic box** (low voltage, RF-clean) | Raspberry Pi 3 (Matter over Wi-Fi, BLE commissioning, local web UI), MUA dry-contact relay module |
 | **2-gang wall box** (low voltage only) | 2× momentary SPDT center-off rockers, 4-conductor run to the plastic box |
 
-Microsecond-precision TRIAC gate timing never leaves the metal box — the MCU
+The Pi 3 has no Thread radio, so Matter runs over Wi-Fi — see
+[Controller platform](docs/architecture.md#controller-platform).
+Microsecond-precision TRIAC gate timing never leaves the metal box — the Pi
 sends `SET <percent>` commands over a 2-wire bus to a dimmer bridge instead of
 driving gate timing across an open-air gap. See
 [docs/wiring.md](docs/wiring.md).
 
 ## Building the firmware
+
+The Raspberry Pi 3 (`boards/rpi3-2gang`) build doesn't exist yet. The
+instructions below build the legacy ESP32-C6 firmware (`generic-2gang`).
 
 Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) (v5.x) and
 [esp-matter](https://github.com/espressif/esp-matter), targeting ESP32-C6.
@@ -99,7 +106,8 @@ cd test && make
 
 ## Forking for your hardware
 
-1. Copy `boards/generic-2gang/` to `boards/<your-board>/`
+1. Copy `boards/rpi3-2gang/` (or `generic-2gang/` for ESP32-C6) to
+   `boards/<your-board>/`
 2. Edit `board-config.yaml` — GPIO map, dimmer curves, minimum fan speed
    floor, MUA defaults, hostname prefix
 3. Build with `-DBOARD=<your-board>`
