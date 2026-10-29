@@ -12,8 +12,8 @@ the knobs.
 │ 2-gang wall box         │     │ External plastic enclosure   │
 │ (low voltage ONLY)      │     │ (low voltage, RF-clean)      │
 │                         │     │                              │
-│  2× momentary SPDT      │────▶│  ESP32-C6 (Matter/Thread +   │
-│  center-off rockers     │ 4-  │  Wi-Fi maintenance plane)    │
+│  2× momentary SPDT      │────▶│  Raspberry Pi 3 (Matter over │
+│  center-off rockers     │ 4-  │  Wi-Fi, BLE commissioning)   │
 │                         │cond │  MUA relay (dry contact)     │
 └─────────────────────────┘     └──────────────┬───────────────┘
                                                │ 2-wire UART
@@ -33,8 +33,8 @@ Why this split:
 
 - **Metal box** — anything touching mains AC lives in a code-required metal
   enclosure.
-- **Plastic box** — a sealed metal enclosure would shadow the antenna; the
-  radio and logic sit outside it for clean Thread/Wi-Fi RF. The MUA relay is
+- **Plastic box** — a sealed metal enclosure would shadow the Pi's onboard
+  chip antenna; the controller sits outside it for clean Wi-Fi/BLE RF. The MUA relay is
   a low-voltage dry contact, so it isn't subject to the metal-box
   requirement.
 - **Wall plate** — no AC switching gear and no RF-blocking metal at the
@@ -46,7 +46,40 @@ Why this split:
   risks a false fire). A UART/I2C bridge (e.g. RobotDyn DimmerLink) inside
   the metal box owns zero-cross sync and gate firing; the MCU sends
   `SET <percent>` commands. Timing-critical logic never leaves the metal
-  enclosure.
+  enclosure — and never runs on Linux, which can't guarantee microsecond
+  GPIO timing.
+
+## Controller platform
+
+The reference controller is a **Raspberry Pi 3** (Model B or B+, BCM2837,
+1GB RAM) running 64-bit Raspberry Pi OS Lite. It replaces the original
+ESP32-C6 module; the consequences:
+
+- **Matter over Wi-Fi, not Thread.** The Pi 3 has Wi-Fi and BLE but no
+  802.15.4 radio. The controller runs on the
+  [connectedhomeip Linux platform](https://github.com/project-chip/connectedhomeip/blob/master/examples/lighting-app/linux/README.md)
+  with `--wifi`; commissioning is over BLE (BlueZ), and the commissioner
+  hands over the Wi-Fi credentials. Upstream documents the Pi 4; the Pi 3
+  runs the same aarch64 build. (Thread is possible later with a USB
+  802.15.4 RCP and [ot-br-posix](https://openthread.io/guides/border-router/raspberry-pi),
+  but isn't in scope.)
+- **No setup SoftAP.** Matter commissioning supplies Wi-Fi, so the ESP's
+  open setup access point goes away. Ethernet is an option where a cable
+  reaches the enclosure.
+- **Persistent state** moves from NVS to files on a small writable
+  partition, with the root filesystem read-only (overlayfs) against power
+  loss. The `hwcal` vs. user-state split and factory-reset rules are
+  unchanged.
+- **Hostname** derives from the `wlan0` MAC (`/sys/class/net/wlan0/address`)
+  — still factory-burned and unique.
+- **Boot time** is ~20–30s before the rockers respond, versus sub-second on
+  the ESP32-C6. The MUA relay pin boots pulled down (open).
+- **Power** needs 5V ≥2.5A, not the 0.6A HLK-PM01. See [wiring.md](wiring.md).
+
+The ESP-IDF firmware under `core/` and `main/` targets the legacy
+`generic-2gang` (ESP32-C6) board. The portable modules (`core/input`,
+`core/dimmer` curves/ramp, `core/mua`) carry over to the Pi unchanged; the
+ESP-only modules need Linux equivalents (see open items).
 
 ## Firmware structure
 
@@ -55,11 +88,11 @@ Why this split:
 | `core/input` | Rocker debounce + tap/hold classification, per-channel state machine, factory-reset chord | Yes — host-tested |
 | `core/dimmer` | User-percent → power-percent curves; ramp/fade engine; UART bridge protocol | Curves and ramp yes; bridge is ESP-only |
 | `core/mua` | Threshold + hysteresis relay logic | Yes — host-tested |
-| `core/settings` | NVS wrapper; calibration vs. user-state namespaces | ESP-only |
-| `core/matter` | esp-matter node: Fan Control (EP1), dimmable light (EP2) | ESP-only |
-| `core/provisioning` | MAC-derived hostname, mDNS, maintenance Wi-Fi (STA + setup SoftAP) | ESP-only |
-| `core/webui` | Local HTTP maintenance UI | ESP-only |
-| `main` | Board-config include + glue | ESP-only |
+| `core/settings` | NVS wrapper; calibration vs. user-state namespaces | ESP-only — Pi: file store on writable partition |
+| `core/matter` | esp-matter node: Fan Control (EP1), dimmable light (EP2) | ESP-only — Pi: connectedhomeip Linux app |
+| `core/provisioning` | MAC-derived hostname, mDNS, maintenance Wi-Fi (STA + setup SoftAP) | ESP-only — Pi: hostname + Avahi; Wi-Fi via Matter commissioning |
+| `core/webui` | Local HTTP maintenance UI | ESP-only — Pi: needs port |
+| `main` | Board-config include + glue | ESP-only — Pi: needs port (GPIO via libgpiod, UART via `/dev/serial0`) |
 
 ### Interaction state machine (per channel, §5.1)
 
@@ -106,28 +139,27 @@ Single node, two endpoints:
 | 1 — Fan | Fan Control (0x0202) | `PercentSetting`/`PercentCurrent` (0x0002/0x0003) for continuous speed; no discrete SpeedMax/SpeedSetting |
 | 2 — Light | On/Off + Level Control | Standard dimmable light; `MoveToLevelWithOnOff` for fades |
 
-Transport is **Thread** — selected explicitly in `sdkconfig.defaults`
-because the stock esp-matter light example defaults to Wi-Fi even on
-Thread-capable hardware. The QR/manual pairing payload printed at first boot
+Transport is **Wi-Fi** on the Pi 3 (no Thread radio). The legacy ESP32-C6
+build selects Thread explicitly in `sdkconfig.defaults`. The QR/manual
+pairing payload printed at first boot
 is the required commissioning baseline; NFC tags are an aid on top
 ([nfc-tags.md](nfc-tags.md)).
 
 ### Hostname and the maintenance plane (§5.4)
 
-- Resolvable hostname is derived from the factory-burned MAC
-  (`esp_efuse_mac_get_default()`), e.g. `exhaust-2af03e.local` — unique
+- Resolvable hostname is derived from the factory-burned MAC (`wlan0` on
+  the Pi; `esp_efuse_mac_get_default()` on the ESP32-C6), e.g.
+  `exhaust-2af03e.local` — unique
   against any other device, and immune to the mDNS probe/collision race when
   multiple units reboot together after a power outage.
 - The NVS "friendly name" is cosmetic only — never the hostname, never on
   the NFC tag.
-- mDNS/HTTP run over **Wi-Fi**, not Thread, so the maintenance UI doesn't
-  depend on a Thread Border Router's SRP-to-mDNS proxying. Matter traffic
-  stays on Thread.
-- Wi-Fi bootstrap: credentials live in NVS (cleared on factory reset). When
-  none are stored, the device brings up an **open setup SoftAP** named after
-  the MAC-derived hostname; the web UI at `http://192.168.4.1/` takes the
-  credentials, then the device reboots into station mode. Normal operation
-  (wall switches, Matter over Thread) never depends on Wi-Fi being up.
+- mDNS/HTTP and Matter share the Pi's Wi-Fi link, so the maintenance UI
+  needs no Thread Border Router.
+- Wi-Fi bootstrap: Matter commissioning over BLE provisions the Wi-Fi
+  network (cleared on factory reset). The wall switches never depend on
+  Wi-Fi being up; Matter control does. (Legacy ESP32-C6: open setup SoftAP
+  at `http://192.168.4.1/`.)
 - VLAN caveat: mDNS multicast doesn't cross subnets. On a segmented network
   (e.g. an isolated IoT VLAN on UniFi), enable the mDNS reflector or
   `.local` resolution breaks silently.
@@ -136,7 +168,7 @@ is the required commissioning baseline; NFC tags are an aid on top
 
 Hold **both** rockers (either direction each) for 5 seconds. The chord timer
 takes precedence over each channel's individual 450ms hold action. On
-trigger, NVS is erased **except hardware calibration** (`mua_threshold`,
+trigger, persistent state is erased **except hardware calibration** (`mua_threshold`,
 hysteresis, `fan min_speed_floor`) — those are properties of the installed
 fan, not user preference. Matter fabric data, hostname label, web UI
 password hash, and last-used levels are all cleared.
@@ -168,6 +200,13 @@ Tracked from the spec:
       blink, web UI calibration/hostname/Wi-Fi/update pages
 - [x] Optional web UI password (§7.1): salted SHA-256 in NVS, session
       cookie, gates POST handlers and `/update`
-- [ ] Remaining bring-up on hardware: validate the esp-matter glue against
+- [ ] Port the ESP-only modules to the Raspberry Pi 3: connectedhomeip
+      Linux app (Fan Control EP1, dimmable light EP2, `--wifi`), libgpiod
+      rocker/relay I/O, `/dev/serial0` dimmer bridge, file-backed settings,
+      web UI, systemd unit with watchdog, and a Pi build in CI
+- [ ] Replace ESP OTA (`/update`) with an image/package update path for the Pi
+- [ ] Measure Pi 3 boot-to-rockers-live time; decide if it's acceptable
+- [ ] Remaining bring-up on hardware (legacy ESP32-C6): validate the
+      esp-matter glue against
       the pinned release (the `Firmware build` CI workflow compile-checks
       this), verify the dimmer-bridge protocol against the real bridge

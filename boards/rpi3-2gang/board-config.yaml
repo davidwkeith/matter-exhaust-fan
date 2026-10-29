@@ -1,0 +1,40 @@
+# Board configuration — the ONLY file a hardware fork edits.
+# Raspberry Pi 3 controller. GPIO numbers are BCM numbers (not header pin
+# numbers); see docs/wiring.md for the header pinout.
+
+board_name: "rpi3-2gang"
+
+gpio:
+  # BCM 17/27/22/23 boot with pull-downs; the rockers close to GND, so the
+  # runtime enables pull-ups (add external 4.7k–10k on a long run).
+  fan_rocker_up: 17
+  fan_rocker_down: 27
+  light_rocker_up: 22
+  light_rocker_down: 23
+  # BCM 24 is pulled down at boot, so an active-high relay module stays
+  # open (MUA off) until the controller is running.
+  mua_relay: 24
+  # Mini UART (/dev/serial0) on header pins 8/10; the PL011 stays on
+  # Bluetooth, which Matter commissioning needs.
+  dimmer_bridge_tx: 14
+  dimmer_bridge_rx: 15
+
+dimmer:
+  fan_curve: linear          # motor-appropriate linear power curve
+  fan_min_percent: 30        # default speed floor; calibrated per motor via web UI
+  light_curve: logarithmic   # LED-appropriate perceptual curve
+  fan_ramp_ms_per_percent: 40    # 0→100% in 4s
+  light_fade_ms_per_percent: 10  # 0→100% in 1s
+
+mua:
+  present: true
+  threshold_percent_default: 60   # default only — real value calibrated to the
+                                  # installed fan's 400 CFM point
+  hysteresis_percent: 4
+
+input:
+  debounce_ms: 25
+  hold_ms: 450
+  factory_reset_hold_ms: 5000
+
+hostname_prefix: "exhaust"

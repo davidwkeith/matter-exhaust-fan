@@ -8,13 +8,13 @@
 
 | Function | Part | Enclosure |
 |---|---|---|
-| MCU/radio | ESP32-C6-WROOM-1-N8, 8MB flash (or equivalent ESP32-C6/H2 module with ≥8MB flash) | External (plastic) |
+| Controller | Raspberry Pi 3 Model B or B+ (Wi-Fi + BLE onboard), 64-bit Raspberry Pi OS Lite on an industrial/high-endurance microSD | External (plastic) |
 | Fan speed control | Leading-edge TRIAC AC dimmer, **motor-rated** (e.g. RobotDyn AC dimmer module) | Metal box |
 | Light dimming | Trailing-edge MOSFET AC dimmer, **LED-rated** | Metal box |
 | Zero-cross detection | Shared between both channels | Metal box |
 | Dimmer-to-MCU bridge | UART/I2C dimmer controller (e.g. DimmerLink) | Metal box |
-| MUA trigger | 1-channel opto-isolated relay module, NO contact to MUA terminals | External (plastic) |
-| Power supply | Isolated AC-DC buck (e.g. HLK-PM01, 5V), line-neutral tap | Metal box |
+| MUA trigger | 1-channel opto-isolated relay module, **high-level trigger** (3.3V input), NO contact to MUA terminals | External (plastic) |
+| Power supply | Isolated AC-DC, **5V ≥2.5A** (e.g. [Mean Well IRM-15-5](https://www.meanwell.com/webapp/product/search.aspx?prod=IRM-15), 5V 3A), line-neutral tap — an HLK-PM01 (0.6A) cannot run a Pi 3 | Metal box |
 | Wall interface | 2× momentary SPDT center-off toggles | 2-gang wall box |
 | Wall-to-module link | 4-conductor low-voltage cable (CAT5 or similar) | Between box and enclosure |
 | Commissioning aids | 2× NTAG213/215 passive NFC stickers | On/near external enclosure |
@@ -31,35 +31,75 @@ line voltage** — only the 4-conductor low-voltage run:
 | 3 | Light rocker up/down (see note) |
 | 4 | GND / spare |
 
-Rocker contacts close to ground; the ESP32-C6 inputs use internal pull-ups
-(active-low). With 4 conductors and 2 SPDT center-off rockers (4 signals +
+Rocker contacts close to ground; the Pi inputs are active-low with pull-ups.
+The Pi's internal pull-ups are weak (~50–65kΩ, per the
+[GPIO docs](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#gpio)),
+so fit external 4.7k–10k pull-ups to 3.3V at the Pi end of the run. Pi GPIO
+is **3.3V only — not 5V tolerant**; nothing on the wall run may carry 5V. With 4 conductors and 2 SPDT center-off rockers (4 signals +
 common), signal pairs share the run — confirm final conductor assignment
 during bring-up, or run CAT5 and use 5 signals + common with pairs to spare.
 
-Default GPIO map (edit `boards/<name>/board-config.yaml`, never core):
+Default GPIO map (BCM numbering; edit `boards/<name>/board-config.yaml`,
+never core):
 
-| Signal | GPIO |
-|---|---|
-| Fan rocker up | 4 |
-| Fan rocker down | 5 |
-| Light rocker up | 6 |
-| Light rocker down | 7 |
-| MUA relay | 10 |
-| Dimmer bridge TX | 16 |
-| Dimmer bridge RX | 17 |
+| Signal | BCM GPIO | Header pin |
+|---|---|---|
+| Fan rocker up | 17 | 11 |
+| Fan rocker down | 27 | 13 |
+| Light rocker up | 22 | 15 |
+| Light rocker down | 23 | 16 |
+| MUA relay | 24 | 18 |
+| Dimmer bridge TX | 14 | 8 |
+| Dimmer bridge RX | 15 | 10 |
+| GND | — | 6, 9, 14, 20 |
+
+Pins were chosen to avoid BCM 2/3 (fixed 1.8kΩ I2C pull-ups) and to boot
+pulled **down**, so the MUA relay stays open while Linux boots.
 
 ## Metal box ↔ plastic enclosure
 
 Two low-voltage links cross between enclosures:
 
-1. **5V DC** from the isolated AC-DC supply to the ESP32-C6.
-2. **UART** (2-wire) to the dimmer bridge. The bridge owns zero-cross sync
-   and gate firing for both dimmers; microsecond gate timing never crosses
-   the gap.
+1. **5V DC** from the isolated AC-DC supply to the Pi (5V on header pin 2,
+   GND on pin 6 — or the micro-USB jack). Keep the run short and heavy enough (≥22 AWG) that the Pi
+   doesn't brown out — under-voltage throttles the CPU and corrupts SD cards.
+2. **UART** (2-wire, 3.3V levels) to the dimmer bridge. The bridge owns
+   zero-cross sync and gate firing for both dimmers; microsecond gate timing
+   never crosses the gap — which matters even more on a Pi, since Linux
+   can't guarantee microsecond GPIO timing. Confirm the bridge accepts 3.3V
+   logic, or add a level shifter.
+
+### Pi 3 UART setup
+
+On the Pi 3 the full PL011 UART drives Bluetooth and GPIO 14/15 get the
+mini UART ([Configure UARTs](https://www.raspberrypi.com/documentation/computers/configuration.html#configure-uarts)).
+Matter commissioning needs BLE, so **keep Bluetooth on the PL011** and use
+the mini UART for the bridge. In `/boot/firmware/config.txt`:
+
+```
+enable_uart=1
+```
+
+`enable_uart=1` pins the core clock so the mini UART's baud rate is stable.
+Remove `console=serial0,115200` from `cmdline.txt` so the kernel console
+doesn't talk to the dimmer bridge. Don't use `dtoverlay=disable-bt`.
+
+### OS hardening
+
+- Enable the read-only overlay root (`raspi-config` → Performance Options →
+  Overlay File System) so a power cut mid-write can't corrupt the SD card.
+  Calibration and user state live on a small separate writable partition.
+- Enable the hardware watchdog (`dtparam=watchdog=on`, systemd
+  `RuntimeWatchdogSec`) so a hung controller reboots.
+- Expect ~20–30s from power-on before the wall rockers respond; the
+  ESP32-C6 was ready in under a second. The MUA relay stays open throughout.
 
 ## MUA dry contact
 
 The relay module lives in the plastic enclosure (it's low-voltage dry
 contact — not subject to the metal-box requirement). Wire the **NO**
-contact to the makeup-air damper terminals. The coil is driven by
-`BOARD_GPIO_MUA_RELAY`.
+contact to the makeup-air damper terminals. The input is driven by
+`BOARD_GPIO_MUA_RELAY` (BCM 24) at 3.3V; power the module's coil from the
+Pi's 5V rail (pin 4). Use a **high-level-trigger** module (or set its H/L
+jumper to H): an active-low module would close the MUA contact while the Pi
+is booting.
