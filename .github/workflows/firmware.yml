@@ -29,7 +29,9 @@ jobs:
     name: idf.py build (esp32c6, ${{ matrix.board }})
     runs-on: ubuntu-latest
     container:
-      image: espressif/esp-matter:latest
+      # Pinned by digest: `latest` tracks esp-matter main on the newest IDF
+      # (v6.x) and broke the build when it moved. Bump deliberately.
+      image: espressif/esp-matter:release-v1.6_idf_v5.5.5@sha256:9f578f907b74688a6a6adcc343f1173ac54647bac3d64d01aeb46beca4dfa06e
     strategy:
       matrix:
         board: [generic-2gang]

@@ -54,10 +54,11 @@ Two physically and electrically separate enclosures:
 | Enclosure | Contents |
 |---|---|
 | **Metal box** (line voltage) | TRIAC fan dimmer (leading-edge, motor-rated), MOSFET light dimmer (trailing-edge, LED-rated), shared zero-cross detection, UART/I2C dimmer bridge, isolated 5V ≥2.5A AC-DC supply |
-| **Plastic box** (low voltage, RF-clean) | Raspberry Pi 3 (Matter over Wi-Fi, BLE commissioning, local web UI), MUA dry-contact relay module |
+| **Plastic box** (low voltage, RF-clean) | Raspberry Pi 3 + ZBT-1 USB Thread radio (Matter over Thread; Wi-Fi for the maintenance UI), MUA dry-contact relay module |
 | **2-gang wall box** (low voltage only) | 2× momentary SPDT center-off rockers, 4-conductor run to the plastic box |
 
-The Pi 3 has no Thread radio, so Matter runs over Wi-Fi — see
+The Pi 3 has no Thread radio of its own, so a USB dongle running OpenThread
+RCP firmware provides one — see
 [Controller platform](docs/architecture.md#controller-platform).
 Microsecond-precision TRIAC gate timing never leaves the metal box — the Pi
 sends `SET <percent>` commands over a 2-wire bus to a dimmer bridge instead of
