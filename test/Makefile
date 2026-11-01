@@ -15,12 +15,19 @@ SRCS = test_main.c \
        ../core/dimmer/ramp.c \
        ../core/mua/mua.c
 
-all: run_tests
+# Raspberry Pi controller (linux/) pieces that are testable off-target.
+LINUX_SRCS = test_linux_settings.c ../linux/src/settings.c
+
+all: run_tests run_linux_tests
 	./run_tests
+	./run_linux_tests
 
 run_tests: $(SRCS)
 	$(CC) $(CFLAGS) -o $@ $(SRCS)
 
+run_linux_tests: $(LINUX_SRCS)
+	$(CC) -Wall -Wextra -Werror -std=c11 -I../linux/src -o $@ $(LINUX_SRCS)
+
 .PHONY: all clean
 clean:
-	rm -f run_tests
+	rm -f run_tests run_linux_tests
