@@ -40,7 +40,9 @@ core/           Core firmware (NOT forked) — Matter clusters, input state
 boards/         Board configs (the ONLY thing a fork edits) — one directory
                 per hardware variant containing board-config.yaml
 main/           Thin ESP-IDF entry point wiring core modules together
-                (legacy ESP32-C6 build; Pi 3 port pending)
+                (legacy ESP32-C6 build)
+linux/          Raspberry Pi 3 controller (exhaustd): the same core modules
+                on Linux GPIO/UART, plus a systemd unit
 tools/          Build tooling — board-config.yaml → C header generator
 test/           Host-side unit tests for the portable core logic (no ESP-IDF
                 required — plain gcc/make)
@@ -67,8 +69,10 @@ driving gate timing across an open-air gap. See
 
 ## Building the firmware
 
-The Raspberry Pi 3 (`boards/rpi3-2gang`) build doesn't exist yet. The
-instructions below build the legacy ESP32-C6 firmware (`generic-2gang`).
+**Raspberry Pi 3** (`boards/rpi3-2gang`): see [linux/README.md](linux/README.md)
+— wall switches, dimmer bridge and MUA work; Matter and the web UI are not
+ported yet. The instructions below build the legacy ESP32-C6 firmware
+(`generic-2gang`).
 
 Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) (v5.x) and
 [esp-matter](https://github.com/espressif/esp-matter), targeting ESP32-C6.
