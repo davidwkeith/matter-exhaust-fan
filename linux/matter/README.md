@@ -8,7 +8,7 @@ Built out of tree with GN against the pinned SDK in
 
 ## Data model
 
-[`exhaust-fan.zap`](exhaust-fan.zap) — composed from the SDK's own chef
+[`data-model/exhaust-fan.zap`](data-model/exhaust-fan.zap) — composed from the SDK's own chef
 device definitions (`rootnode_fan`, `rootnode_dimmablelight`):
 
 | Endpoint | Device type | Clusters |
@@ -17,8 +17,16 @@ device definitions (`rootnode_fan`, `rootnode_dimmablelight`):
 | 1 | Fan (0x002B) | Identify, Groups, Descriptor, Fan Control |
 | 2 | Dimmable Light (0x0101) | Identify, Groups, On/Off, Level Control, Descriptor |
 
-The `.matter` IDL next to it is generated from the `.zap`; regenerate both
-with the SDK's ZAP tooling after editing the data model.
+The fan endpoint's On/Off cluster is disabled so `PercentSetting` is the
+one way to drive the fan. The SDK only builds data models from under its
+own `examples/` tree, so `setup.sh` links this directory in as
+`examples/exhaust-fan`. The `.matter` IDL next to the `.zap` is generated
+from it; after editing the `.zap` (with the SDK's `zap` tool), regenerate
+through that link so the template paths resolve:
+
+```sh
+scripts/tools/zap/generate.py examples/exhaust-fan/data-model/exhaust-fan.zap   # from the SDK root
+```
 
 ## Threads
 
@@ -37,13 +45,14 @@ own thread, started from `ApplicationInit()`:
 ## Build
 
 ```sh
-git submodule update --init linux/matter/third_party/connectedhomeip
-cd linux/matter/third_party/connectedhomeip
-scripts/checkout_submodules.py --shallow --platform linux
-source scripts/activate.sh            # bootstrap: GN, ninja, ZAP, Python env
-cd ../..                              # linux/matter
+linux/matter/setup.sh                 # submodule, SDK deps, bootstrap (once)
+cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh && cd -
+cd linux/matter
 gn gen out/host && ninja -C out/host  # → out/host/exhaustd-matter
 ```
+
+Building on the Pi 3 itself is slow and tight on 1GB RAM; cross-compiling
+for arm64 is an open item.
 
 Run on the Pi with Thread (needs ot-br-posix running against the ZBT-1,
 see [docs/wiring.md](../../docs/wiring.md)):
@@ -54,3 +63,13 @@ exhaustd-matter --thread --ble-controller 0 --KVS /var/lib/exhaustd/chip_kvs
 
 Without `--thread` it runs over IP, which is how it can be commissioned and
 tested on a desktop (`chip-tool pairing onnetwork …`).
+
+## Tests
+
+[`test/e2e.py`](test/e2e.py) commissions the app over IP with `chip-tool`
+and drives it from both sides: remote fan/light writes reach the dimmer
+bridge and MUA relay, a wall-switch hold is reported back to Matter, and
+SIGTERM exits cleanly. The app is built against
+[`test/fake_gpio.c`](test/fake_gpio.c) (rockers and relay as files) and
+talks to a pty standing in for the dimmer bridge. It needs IPv6, and runs
+in the `Matter controller` CI workflow.

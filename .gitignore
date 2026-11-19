@@ -21,6 +21,5 @@ build-linux/
 .idea/
 *.swp
 
-# exhaustd-matter: GN output and the SDK checkout (a submodule once pinned)
+# exhaustd-matter GN output
 linux/matter/out/
-linux/matter/third_party/connectedhomeip

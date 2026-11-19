@@ -3,13 +3,16 @@
 import("//build_overrides/chip.gni")
 
 import("${chip_root}/build/chip/tools.gni")
-import("${chip_root}/src/app/chip_data_model.gni")
 
 assert(chip_build_tools)
 
 declare_args() {
   # boards/<name>/board-config.yaml to compile in.
   exhaust_board = "rpi3-2gang"
+
+  # GPIO backend. Off-target tests point this at a file-backed fake with
+  # the same gpio.h interface.
+  exhaust_gpio_source = "../src/gpio.c"
 }
 
 _board_config_h = "${root_gen_dir}/board/board_config.h"
@@ -29,11 +32,6 @@ config("board_config_include") {
   include_dirs = [ "${root_gen_dir}/board" ]
 }
 
-chip_data_model("exhaust-fan-data-model") {
-  zap_file = "exhaust-fan.zap"
-  is_server = true
-}
-
 # The controller loop and its Linux I/O, shared with the standalone
 # (stub) build in ../CMakeLists.txt.
 source_set("controller") {
@@ -46,7 +44,7 @@ source_set("controller") {
     "../../core/mua/mua.c",
     "../src/bridge.c",
     "../src/controller.c",
-    "../src/gpio.c",
+    exhaust_gpio_source,
     "../src/hostname.c",
     "../src/sd_notify.c",
     "../src/settings.c",
@@ -59,11 +57,6 @@ source_set("controller") {
   ]
   public_configs = [ ":board_config_include" ]
   deps = [ ":board_config" ]
-
-  # Plain C11 + POSIX, built with the same flags as the CMake build.
-  cflags_c = [ "-std=c11" ]
-  configs -= [ "${build_root}/config/compiler:std_default" ]
-  configs -= [ "${build_root}/config/compiler:strict_warnings" ]
 }
 
 executable("exhaustd-matter") {
@@ -78,7 +71,7 @@ executable("exhaustd-matter") {
   ]
   deps = [
     ":controller",
-    ":exhaust-fan-data-model",
+    "${chip_root}/examples/exhaust-fan/data-model",
     "${chip_root}/examples/platform/linux:app-main",
     "${chip_root}/src/app/common:ids",
     "${chip_root}/src/lib",
