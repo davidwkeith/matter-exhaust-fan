@@ -23,9 +23,12 @@ import tty
 parser = argparse.ArgumentParser()
 parser.add_argument("--app", required=True)
 parser.add_argument("--chip-tool", required=True)
+parser.add_argument("--paa-trust-store", required=True,
+                    help="the SDK's credentials/development/paa-root-certs")
 args = parser.parse_args()
 app_path = os.path.abspath(args.app)
 chip_tool_path = os.path.abspath(args.chip_tool)
+paa_path = os.path.abspath(args.paa_trust_store)
 
 work = tempfile.mkdtemp(prefix="exhaustd-e2e-")
 os.chdir(work)
@@ -103,8 +106,14 @@ try:
         raise SystemExit
     check("boots and drives the bridge", last("FAN") == 0, f"(bridge: {bridge[:3]})")
 
-    out = chip_tool("pairing", "onnetwork", "1", "20202021", timeout=180)
-    check("commissions over IP", "Device commissioning completed with success" in out)
+    # The app uses the SDK's example DAC, chained to a development PAA.
+    out = chip_tool("pairing", "onnetwork", "1", "20202021",
+                    "--paa-trust-store-path", paa_path, timeout=180)
+    commissioned = "Device commissioning completed with success" in out
+    check("commissions over IP", commissioned)
+    if not commissioned:
+        print("chip-tool pairing output (tail):\n" + out[-15000:])
+        raise SystemExit
 
     # Remote fan write: 70% user → 30 + 0.7 * 70 = 79% power on the
     # linear curve with the 30% floor; MUA threshold 60 closes the relay.
@@ -116,13 +125,15 @@ try:
     check("PercentCurrent reports the speed", attr(out, "PercentCurrent") == "70",
           f"(got {attr(out, 'PercentCurrent')})")
 
+    # The light is off and the MUA threshold uncalibrated, so the status
+    # blink owns the light output until the light is turned on (§5.6).
     chip_tool("onoff", "on", "1", "2")
     pump(2)
     on_level = last("LIGHT")
     check("remote light on", bool(on_level), f"(last LIGHT {on_level})")
     chip_tool("levelcontrol", "move-to-level", "127", "0", "0", "0", "1", "2")
     pump(2)
-    check("remote level change", last("LIGHT") not in (None, 0, on_level),
+    check("remote level change", bool(on_level) and last("LIGHT") not in (None, 0, on_level),
           f"(last LIGHT {last('LIGHT')})")
 
     # Wall switch: hold fan down → ramp off; Matter sees the new setting.

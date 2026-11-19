@@ -64,4 +64,5 @@ jobs:
         run: |
           python3 linux/matter/test/e2e.py \
             --app linux/matter/out/sim/exhaustd-matter \
-            --chip-tool linux/matter/third_party/connectedhomeip/out/chip-tool/chip-tool
+            --chip-tool linux/matter/third_party/connectedhomeip/out/chip-tool/chip-tool \
+            --paa-trust-store linux/matter/third_party/connectedhomeip/credentials/development/paa-root-certs
