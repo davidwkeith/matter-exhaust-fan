@@ -11,6 +11,10 @@ main/board_config.h
 # Host test artifacts
 test/*.o
 test/run_tests
+test/run_linux_tests
+
+# Raspberry Pi controller build output
+build-linux/
 
 # Editors
 .vscode/

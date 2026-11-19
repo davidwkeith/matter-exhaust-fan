@@ -86,9 +86,10 @@ the consequences:
 - **Power** needs 5V ≥2.5A, not the 0.6A HLK-PM01. See [wiring.md](wiring.md).
 
 The ESP-IDF firmware under `core/` and `main/` targets the legacy
-`generic-2gang` (ESP32-C6) board. The portable modules (`core/input`,
-`core/dimmer` curves/ramp, `core/mua`) carry over to the Pi unchanged; the
-ESP-only modules need Linux equivalents (see open items).
+`generic-2gang` (ESP32-C6) board. The Pi build lives in
+[`linux/`](../linux/README.md): it compiles the portable modules
+(`core/input`, `core/dimmer` curves/ramp, `core/mua`) unchanged and
+replaces the ESP-only glue with Linux equivalents.
 
 ## Firmware structure
 
@@ -97,11 +98,11 @@ ESP-only modules need Linux equivalents (see open items).
 | `core/input` | Rocker debounce + tap/hold classification, per-channel state machine, factory-reset chord | Yes — host-tested |
 | `core/dimmer` | User-percent → power-percent curves; ramp/fade engine; UART bridge protocol | Curves and ramp yes; bridge is ESP-only |
 | `core/mua` | Threshold + hysteresis relay logic | Yes — host-tested |
-| `core/settings` | NVS wrapper; calibration vs. user-state namespaces | ESP-only — Pi: file store on writable partition |
-| `core/matter` | esp-matter node: Fan Control (EP1), dimmable light (EP2) | ESP-only — Pi: connectedhomeip Linux app |
-| `core/provisioning` | MAC-derived hostname, mDNS, maintenance Wi-Fi (STA + setup SoftAP) | ESP-only — Pi: hostname + Avahi; Wi-Fi set at imaging time |
+| `core/settings` | NVS wrapper; calibration vs. user-state namespaces | ESP-only — Pi: `linux/src/settings.c` (files) |
+| `core/matter` | esp-matter node: Fan Control (EP1), dimmable light (EP2) | ESP-only — Pi: connectedhomeip Linux app (pending; stubbed) |
+| `core/provisioning` | MAC-derived hostname, mDNS, maintenance Wi-Fi (STA + setup SoftAP) | ESP-only — Pi: `linux/src/hostname.c`; Avahi pending; Wi-Fi set at imaging time |
 | `core/webui` | Local HTTP maintenance UI | ESP-only — Pi: needs port |
-| `main` | Board-config include + glue | ESP-only — Pi: needs port (GPIO via libgpiod, UART via `/dev/serial0`) |
+| `main` | Board-config include + glue | ESP-only — Pi: `linux/src/main.c` (GPIO char device, `/dev/serial0`) |
 
 ### Interaction state machine (per channel, §5.1)
 
@@ -209,10 +210,12 @@ Tracked from the spec:
       blink, web UI calibration/hostname/Wi-Fi/update pages
 - [x] Optional web UI password (§7.1): salted SHA-256 in NVS, session
       cookie, gates POST handlers and `/update`
-- [ ] Port the ESP-only modules to the Raspberry Pi 3: connectedhomeip
-      Linux app (Fan Control EP1, dimmable light EP2, `--thread`), libgpiod
-      rocker/relay I/O, `/dev/serial0` dimmer bridge, file-backed settings,
-      web UI, systemd unit with watchdog, and a Pi build in CI
+- [x] Pi 3 controller (`linux/`): rocker/relay I/O over the GPIO char
+      device, `/dev/serial0` dimmer bridge, file-backed settings, systemd
+      unit with watchdog, Pi build in CI
+- [ ] Pi 3 Matter: connectedhomeip Linux app (Fan Control EP1, dimmable
+      light EP2, `--thread`) replacing `linux/src/matter_stub.c`
+- [ ] Pi 3 web UI (calibration, password) and Avahi mDNS
 - [ ] Replace ESP OTA (`/update`) with an image/package update path for the Pi
 - [ ] Measure Pi 3 boot-to-rockers-live time; decide if it's acceptable
 - [ ] ot-br-posix on the Pi: confirm the ZBT-1 RCP link settings, and

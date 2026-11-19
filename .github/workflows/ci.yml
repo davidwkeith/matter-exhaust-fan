@@ -28,3 +28,15 @@ jobs:
             echo "== $cfg"
             python3 tools/gen_board_config.py "$cfg" /tmp/board_config.h
           done
+
+  linux-controller:
+    name: Raspberry Pi controller build (linux/)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Configure and build exhaustd
+        run: |
+          cmake -S linux -B build-linux -DBOARD=rpi3-2gang
+          cmake --build build-linux

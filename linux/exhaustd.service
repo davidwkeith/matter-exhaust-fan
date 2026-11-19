@@ -1,0 +1,25 @@
+# Raspberry Pi 3 controller daemon. Install: cmake --install <build-dir>
+[Unit]
+Description=Matter exhaust fan + light controller
+# No network dependency on purpose: the wall switches must work with
+# Wi-Fi down.
+
+[Service]
+Type=notify
+ExecStart=/usr/local/sbin/exhaustd
+# Calibration + user state; on the writable partition, not the overlay root.
+StateDirectory=exhaustd
+# A factory reset exits cleanly and relies on this to come back up fresh.
+Restart=always
+RestartSec=1
+# The main loop pings every second; a hang longer than this restarts it.
+WatchdogSec=5
+# Unprivileged; device access comes from the Pi OS gpio/dialout groups.
+DynamicUser=yes
+SupplementaryGroups=gpio dialout
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
