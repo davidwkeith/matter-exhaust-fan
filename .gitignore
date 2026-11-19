@@ -20,3 +20,7 @@ build-linux/
 .vscode/
 .idea/
 *.swp
+
+# exhaustd-matter: GN output and the SDK checkout (a submodule once pinned)
+linux/matter/out/
+linux/matter/third_party/connectedhomeip

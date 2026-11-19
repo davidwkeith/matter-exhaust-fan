@@ -29,6 +29,7 @@ add_custom_command(
 add_executable(exhaustd
     ${BOARD_CONFIG_H}
     src/main.c
+    src/controller.c
     src/gpio.c
     src/bridge.c
     src/settings.c
