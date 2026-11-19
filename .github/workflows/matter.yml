@@ -47,8 +47,8 @@ jobs:
       - name: Build exhaustd-matter (real GPIO, as shipped)
         shell: bash
         run: |
-          cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh && cd -
-          cd linux/matter
+          cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh
+          cd "$GITHUB_WORKSPACE/linux/matter"
           gn gen out/host
           ninja -C out/host exhaustd-matter
       - name: Build the e2e variant (fake GPIO) and chip-tool
@@ -57,8 +57,7 @@ jobs:
           cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh
           gn gen out/chip-tool --root=examples/chip-tool
           ninja -C out/chip-tool chip-tool
-          cd -
-          cd linux/matter
+          cd "$GITHUB_WORKSPACE/linux/matter"
           gn gen out/sim --args='exhaust_gpio_source="//test/fake_gpio.c"'
           ninja -C out/sim exhaustd-matter
       - name: Commission and drive it

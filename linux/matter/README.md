@@ -46,8 +46,8 @@ own thread, started from `ApplicationInit()`:
 
 ```sh
 linux/matter/setup.sh                 # submodule, SDK deps, bootstrap (once)
-cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh && cd -
-cd linux/matter
+repo=$PWD; cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh
+cd "$repo/linux/matter"   # activate.sh changes directories, so not `cd -`
 gn gen out/host && ninja -C out/host  # → out/host/exhaustd-matter
 ```
 

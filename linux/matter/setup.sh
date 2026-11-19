@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-time setup for building exhaustd-matter; run from anywhere. Then, in
 # each shell that builds:
-#   cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh && cd -
+#   repo=$PWD; cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh; cd "$repo"
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 chip="$here/third_party/connectedhomeip"
