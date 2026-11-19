@@ -65,14 +65,19 @@ def pump(seconds):
 
 
 def chip_tool(*cmd, timeout=120):
-    p = subprocess.Popen([chip_tool_path, *cmd, "--storage-directory", "chip-tool-store"],
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    end = time.time() + timeout
-    while p.poll() is None and time.time() < end:
-        pump(0.2)
-    if p.poll() is None:
-        p.kill()
-    return p.stdout.read()
+    # Output goes to a file, not a pipe: chip-tool logs far more than a pipe
+    # buffer holds, and would block mid-command while we wait for it.
+    with open("chip-tool.log", "w+") as log:
+        p = subprocess.Popen([chip_tool_path, *cmd, "--storage-directory", "chip-tool-store"],
+                             stdout=log, stderr=subprocess.STDOUT)
+        end = time.time() + timeout
+        while p.poll() is None and time.time() < end:
+            pump(0.2)
+        if p.poll() is None:
+            p.kill()
+            p.wait()
+        log.seek(0)
+        return log.read()
 
 
 def last(channel):
