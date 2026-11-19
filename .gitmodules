@@ -1,0 +1,4 @@
+[submodule "linux/matter/third_party/connectedhomeip"]
+	path = linux/matter/third_party/connectedhomeip
+	url = https://github.com/project-chip/connectedhomeip.git
+	shallow = true

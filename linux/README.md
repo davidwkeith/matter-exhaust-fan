@@ -13,7 +13,7 @@ replaces the ESP-only glue with Linux equivalents:
 | eFuse MAC hostname | `hostname.c`: `wlan0` MAC → `exhaust-xxxxxx` |
 | FreeRTOS tasks | one 5ms poll loop in `main.c` |
 | task watchdog / OTA rollback | systemd `Type=notify` + `WatchdogSec=` (`exhaustd.service`) |
-| esp-matter | **not yet**: `matter_stub.c` stands in (wall switches only) |
+| esp-matter | [`matter/`](matter/README.md): connectedhomeip Linux app (`exhaustd-matter`); `matter_stub.c` for the standalone build |
 
 ## Status
 
@@ -21,9 +21,12 @@ Done: wall rockers (tap/hold, factory-reset chord), fan ramp and light fade
 through the dimmer bridge, MUA interlock, status blink until the MUA
 threshold is calibrated, persisted last-used levels.
 
-Not yet: Matter (connectedhomeip Linux app with `--thread` over
-ot-br-posix + ZBT-1), the web UI (calibration currently has no editor; the
-defaults from `board-config.yaml` apply), and mDNS (Avahi).
+Matter (Thread via ot-br-posix + ZBT-1) is the separate `exhaustd-matter`
+build in [`matter/`](matter/README.md); this CMake build is the same
+controller without it.
+
+Not yet: the web UI (calibration currently has no editor; the defaults
+from `board-config.yaml` apply), and mDNS (Avahi).
 
 ## Build and install (on the Pi)
 

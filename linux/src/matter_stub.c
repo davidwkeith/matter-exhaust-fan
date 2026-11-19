@@ -16,6 +16,8 @@ int matter_start(const matter_callbacks_t *cbs)
     return 0;
 }
 
+void matter_poll(void) {}
+
 void matter_report_fan_percent(uint8_t percent) { (void)percent; }
 
 void matter_report_light(bool on, uint8_t percent)

@@ -1,0 +1,68 @@
+name: Matter controller
+
+# Builds exhaustd-matter (the Raspberry Pi controller with Matter) against
+# the pinned connectedhomeip submodule, then commissions it over IP with
+# chip-tool and drives it end to end (linux/matter/test/e2e.py). Slow (SDK
+# bootstrap + two large builds), so it only runs when the Pi controller
+# changes.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "core/input/**"
+      - "core/dimmer/**"
+      - "core/mua/**"
+      - "linux/**"
+      - "boards/rpi3-2gang/**"
+      - "tools/gen_board_config.py"
+      - ".gitmodules"
+      - ".github/workflows/matter.yml"
+  push:
+    branches: [main]
+    paths:
+      - "core/input/**"
+      - "core/dimmer/**"
+      - "core/mua/**"
+      - "linux/**"
+      - "boards/rpi3-2gang/**"
+      - "tools/gen_board_config.py"
+      - ".gitmodules"
+
+jobs:
+  build-and-e2e:
+    name: exhaustd-matter build + commissioning e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      # The build image connectedhomeip v1.5.1.0's own CI uses.
+      image: ghcr.io/project-chip/chip-build:182
+      # Matter needs IPv6, which Docker disables by default.
+      options: --sysctl "net.ipv6.conf.all.disable_ipv6=0"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up connectedhomeip
+        run: |
+          git config --global --add safe.directory '*'
+          linux/matter/setup.sh
+      - name: Build exhaustd-matter (real GPIO, as shipped)
+        shell: bash
+        run: |
+          cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh
+          cd "$GITHUB_WORKSPACE/linux/matter"
+          gn gen out/host
+          ninja -C out/host exhaustd-matter
+      - name: Build the e2e variant (fake GPIO) and chip-tool
+        shell: bash
+        run: |
+          cd linux/matter/third_party/connectedhomeip && source scripts/activate.sh
+          gn gen out/chip-tool --root=examples/chip-tool
+          ninja -C out/chip-tool chip-tool
+          cd "$GITHUB_WORKSPACE/linux/matter"
+          gn gen out/sim --args='exhaust_gpio_source="//test/fake_gpio.c"'
+          ninja -C out/sim exhaustd-matter
+      - name: Commission and drive it
+        run: |
+          python3 linux/matter/test/e2e.py \
+            --app linux/matter/out/sim/exhaustd-matter \
+            --chip-tool linux/matter/third_party/connectedhomeip/out/chip-tool/chip-tool \
+            --paa-trust-store linux/matter/third_party/connectedhomeip/credentials/development/paa-root-certs

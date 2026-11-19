@@ -1,0 +1,18 @@
+import("//build_overrides/chip.gni")
+
+import("${chip_root}/config/standalone/args.gni")
+
+chip_device_project_config_include = "<CHIPProjectAppConfig.h>"
+chip_project_config_include = "<CHIPProjectAppConfig.h>"
+chip_system_project_config_include = "<SystemProjectConfig.h>"
+
+chip_project_config_include_dirs = [ "//include" ]
+chip_project_config_include_dirs += [ "${chip_root}/config/standalone" ]
+
+# Matter over Thread through ot-br-posix (D-Bus) + the ZBT-1 RCP; selected
+# at runtime with --thread. Without it the app runs over IP, which is how
+# it is tested off-target.
+chip_enable_openthread = true
+chip_enable_wifi = false
+
+chip_enable_read_client = false
