@@ -100,7 +100,9 @@ def check(name, ok, detail=""):
 
 
 def attr(out, name):
-    found = re.findall(rf"{name}: (\S+)", out)
+    # chip-tool colors its log lines; drop the ANSI escapes before matching.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", out)
+    found = re.findall(rf"{name}: (\S+)", plain)
     return found[-1] if found else None
 
 
