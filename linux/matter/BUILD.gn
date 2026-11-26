@@ -1,0 +1,84 @@
+# exhaustd with Matter: the shared controller loop (../src/controller.c)
+# plus the connectedhomeip Linux app around it.
+import("//build_overrides/chip.gni")
+
+import("${chip_root}/build/chip/tools.gni")
+
+assert(chip_build_tools)
+
+declare_args() {
+  # boards/<name>/board-config.yaml to compile in.
+  exhaust_board = "rpi3-2gang"
+
+  # GPIO backend. Off-target tests point this at a file-backed fake with
+  # the same gpio.h interface.
+  exhaust_gpio_source = "../src/gpio.c"
+}
+
+_board_config_h = "${root_gen_dir}/board/board_config.h"
+
+action("board_config") {
+  script = "//../../tools/gen_board_config.py"
+  _yaml = "//../../boards/${exhaust_board}/board-config.yaml"
+  inputs = [ _yaml ]
+  outputs = [ _board_config_h ]
+  args = [
+    rebase_path(_yaml, root_build_dir),
+    rebase_path(_board_config_h, root_build_dir),
+  ]
+}
+
+config("board_config_include") {
+  include_dirs = [ "${root_gen_dir}/board" ]
+}
+
+# The controller loop and its Linux I/O, shared with the standalone
+# (stub) build in ../CMakeLists.txt.
+source_set("controller") {
+  sources = [
+    "../../core/dimmer/dimmer_curve.c",
+    "../../core/dimmer/ramp.c",
+    "../../core/input/channel.c",
+    "../../core/input/reset_chord.c",
+    "../../core/input/rocker.c",
+    "../../core/mua/mua.c",
+    "../src/bridge.c",
+    "../src/controller.c",
+    exhaust_gpio_source,
+    "../src/hostname.c",
+    "../src/sd_notify.c",
+    "../src/settings.c",
+  ]
+  include_dirs = [
+    "../src",
+    "../../core/dimmer/include",
+    "../../core/input/include",
+    "../../core/mua/include",
+  ]
+  public_configs = [ ":board_config_include" ]
+  deps = [ ":board_config" ]
+}
+
+executable("exhaustd-matter") {
+  sources = [
+    "include/CHIPProjectAppConfig.h",
+    "main.cpp",
+    "matter_chip.cpp",
+  ]
+  include_dirs = [
+    "include",
+    "../src",
+  ]
+  deps = [
+    ":controller",
+    "${chip_root}/examples/exhaust-fan/data-model",
+    "${chip_root}/examples/platform/linux:app-main",
+    "${chip_root}/src/app/common:ids",
+    "${chip_root}/src/lib",
+  ]
+  output_dir = root_out_dir
+}
+
+group("default") {
+  deps = [ ":exhaustd-matter" ]
+}

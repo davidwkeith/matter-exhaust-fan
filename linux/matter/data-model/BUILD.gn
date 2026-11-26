@@ -1,0 +1,13 @@
+# The exhaust fan's Matter data model (EP1 Fan, EP2 Dimmable Light).
+#
+# connectedhomeip only lets data models be built from under its own
+# examples/ tree, so setup.sh links this directory in as
+# ${chip_root}/examples/exhaust-fan/data-model, and that is the label the
+# app depends on. The .zap's template paths are relative to that location.
+import("//build_overrides/chip.gni")
+import("${chip_root}/src/app/chip_data_model.gni")
+
+chip_data_model("data-model") {
+  zap_file = "exhaust-fan.zap"
+  is_server = true
+}

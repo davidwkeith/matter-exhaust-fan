@@ -99,7 +99,7 @@ replaces the ESP-only glue with Linux equivalents.
 | `core/dimmer` | User-percent → power-percent curves; ramp/fade engine; UART bridge protocol | Curves and ramp yes; bridge is ESP-only |
 | `core/mua` | Threshold + hysteresis relay logic | Yes — host-tested |
 | `core/settings` | NVS wrapper; calibration vs. user-state namespaces | ESP-only — Pi: `linux/src/settings.c` (files) |
-| `core/matter` | esp-matter node: Fan Control (EP1), dimmable light (EP2) | ESP-only — Pi: connectedhomeip Linux app (pending; stubbed) |
+| `core/matter` | esp-matter node: Fan Control (EP1), dimmable light (EP2) | ESP-only — Pi: `linux/matter/` (connectedhomeip Linux app) |
 | `core/provisioning` | MAC-derived hostname, mDNS, maintenance Wi-Fi (STA + setup SoftAP) | ESP-only — Pi: `linux/src/hostname.c`; Avahi pending; Wi-Fi set at imaging time |
 | `core/webui` | Local HTTP maintenance UI | ESP-only — Pi: needs port |
 | `main` | Board-config include + glue | ESP-only — Pi: `linux/src/main.c` (GPIO char device, `/dev/serial0`) |
@@ -213,8 +213,12 @@ Tracked from the spec:
 - [x] Pi 3 controller (`linux/`): rocker/relay I/O over the GPIO char
       device, `/dev/serial0` dimmer bridge, file-backed settings, systemd
       unit with watchdog, Pi build in CI
-- [ ] Pi 3 Matter: connectedhomeip Linux app (Fan Control EP1, dimmable
-      light EP2, `--thread`) replacing `linux/src/matter_stub.c`
+- [x] Pi 3 Matter: connectedhomeip Linux app (`linux/matter/`, Fan Control
+      EP1, dimmable light EP2), commissioned end to end over IP in CI
+- [x] Pi 3 Matter arm64 cross-build (`linux/matter/build-arm64.sh`; CI
+      artifact `exhaustd-matter-arm64`, smoke-tested under qemu)
+- [ ] Pi 3 Matter on hardware: `--thread` against ot-br-posix + ZBT-1, BLE
+      commissioning
 - [ ] Pi 3 web UI (calibration, password) and Avahi mDNS
 - [ ] Replace ESP OTA (`/update`) with an image/package update path for the Pi
 - [ ] Measure Pi 3 boot-to-rockers-live time; decide if it's acceptable

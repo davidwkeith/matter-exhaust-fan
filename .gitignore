@@ -20,3 +20,7 @@ build-linux/
 .vscode/
 .idea/
 *.swp
+
+# exhaustd-matter GN output
+linux/matter/out/
+__pycache__/
