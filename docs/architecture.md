@@ -215,8 +215,10 @@ Tracked from the spec:
       unit with watchdog, Pi build in CI
 - [x] Pi 3 Matter: connectedhomeip Linux app (`linux/matter/`, Fan Control
       EP1, dimmable light EP2), commissioned end to end over IP in CI
+- [x] Pi 3 Matter arm64 cross-build (`linux/matter/build-arm64.sh`; CI
+      artifact `exhaustd-matter-arm64`, smoke-tested under qemu)
 - [ ] Pi 3 Matter on hardware: `--thread` against ot-br-posix + ZBT-1, BLE
-      commissioning, and an arm64 cross-build
+      commissioning
 - [ ] Pi 3 web UI (calibration, password) and Avahi mDNS
 - [ ] Replace ESP OTA (`/update`) with an image/package update path for the Pi
 - [ ] Measure Pi 3 boot-to-rockers-live time; decide if it's acceptable

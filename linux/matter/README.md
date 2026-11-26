@@ -51,8 +51,28 @@ cd "$repo/linux/matter"   # activate.sh changes directories, so not `cd -`
 gn gen out/host && ninja -C out/host  # → out/host/exhaustd-matter
 ```
 
-Building on the Pi 3 itself is slow and tight on 1GB RAM; cross-compiling
-for arm64 is an open item.
+### For the Pi (arm64 cross-build)
+
+Building on the Pi 3 itself is slow and tight on 1GB RAM, so cross-compile
+on an x86-64 Linux machine instead (after `setup.sh`):
+
+```sh
+linux/matter/build-arm64.sh           # → linux/matter/out/arm64/exhaustd-matter
+```
+
+It uses the SDK's own arm64 recipe (clang, `target_cpu="arm64"`) against
+the Ubuntu 24.04 aarch64 sysroot from the SDK's cross-compile image, fetched
+from CIPD into `out/sysroot/`. CI builds it too and attaches the binary to
+each run as the `exhaustd-matter-arm64` artifact.
+
+On the Pi, it needs **64-bit Raspberry Pi OS Trixie** (glibc ≥ 2.38;
+Bookworm's 2.36 is too old) and the shared libraries it links:
+
+```sh
+sudo apt install libglib2.0-0t64 libssl3t64
+sudo install -m 755 exhaustd-matter /usr/local/sbin/
+sudo systemctl edit exhaustd   # [Service] ExecStart= then ExecStart=/usr/local/sbin/exhaustd-matter --thread …
+```
 
 Run on the Pi with Thread (needs ot-br-posix running against the ZBT-1,
 see [docs/wiring.md](../../docs/wiring.md)):

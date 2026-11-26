@@ -66,3 +66,16 @@ jobs:
             --app linux/matter/out/sim/exhaustd-matter \
             --chip-tool linux/matter/third_party/connectedhomeip/out/chip-tool/chip-tool \
             --paa-trust-store linux/matter/third_party/connectedhomeip/credentials/development/paa-root-certs
+      - name: Cross-compile for the Raspberry Pi (arm64)
+        run: linux/matter/build-arm64.sh
+      - name: Smoke-test the arm64 binary under qemu
+        run: |
+          apt-get update -q && apt-get install -y -q qemu-user
+          qemu-aarch64 -L linux/matter/out/sysroot/ubuntu-24.04-aarch64-sysroot \
+            linux/matter/out/arm64/exhaustd-matter --help 2>&1 | tee help.txt
+          grep -q -- "--uart <path>" help.txt
+      - name: Upload the arm64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: exhaustd-matter-arm64
+          path: linux/matter/out/arm64/exhaustd-matter
